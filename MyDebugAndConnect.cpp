@@ -1,6 +1,6 @@
 /****************************************************************************************
 * File :		MyDebugAndConnect.cpp
-* Date :		2020-Apr-25
+* Date :		2020-Mai-03
 * By :			Jean-Daniel Lavoie
 * Description :	This library control the serial port and one led for debuging.
 *				It also allow to manage the WiFi connection and his parameters.
@@ -121,6 +121,8 @@ void MyConnect::init(void) {
 // Restore parameters from the SPIFF filename.
 // Return true if success.
 bool MyConnect::readConfigFile(const char *filename) {
+	DynamicJsonDocument doc(512);
+	char *buf2 = new char[18];
 // Print the directory and filename of the configuration.
 	String sfilename = filename;
 	DEBUG_MYCONNECT("LOAD configuration from file : " + sfilename);
@@ -142,7 +144,6 @@ bool MyConnect::readConfigFile(const char *filename) {
 	}
 
 // Allocate and store contents of file in a Document.
-	DynamicJsonDocument doc(512);
 	DeserializationError error = deserializeJson(doc, file);
 // Closing file and unmount SPIFlashFileSystem.
 	file.close();
@@ -157,7 +158,6 @@ bool MyConnect::readConfigFile(const char *filename) {
 	Serial.println("");
 
 // Parse all parameters and override local variables.
-	char *buf2 = new char[18];
 	if(doc.containsKey("local")) {
 		strcpy(buf2, doc["local"]);
 		staticAddress.local.fromString(buf2);
@@ -187,6 +187,7 @@ bool MyConnect::readConfigFile(const char *filename) {
 // Save parameters to filename in the FileSystem
 // Return true if success.
 bool MyConnect::writeConfigFile(const char *filename) {
+	DynamicJsonDocument doc(512);
 // Print the directory and filename of the configuration.
 	String sfilename = filename;
 	DEBUG_MYCONNECT("SAVE configuration to file : " + sfilename);
@@ -213,7 +214,6 @@ bool MyConnect::writeConfigFile(const char *filename) {
 	myconnect.portal_timeout = atoi(p_portal_timeout->getValue());
 
 // Create a JSON document and pass it the parameters.
-	DynamicJsonDocument doc(512);
 	doc["local"]	= staticAddress.local.toString();
 	doc["gateway"]	= staticAddress.gateway.toString();
 	doc["subnet"]	= staticAddress.subnet.toString();
@@ -244,47 +244,42 @@ bool MyConnect::writeConfigFile(const char *filename) {
 ///////////////////////////////////////////////////////////////////////////////////////
 // Configure WiFiManager.
 void MyConnect::ConfigureManager(void) {
+	char _connect_timeout[6];
+	char _portal_timeout[6];
+
 // Use defined hostname.
 	WiFi.hostname(staticAddress.hostname);
-//	WiFiManagerParameter p_hostname("hostname", "Custom hostname :", staticAddress.hostname, 32);
 	p_hostname->setValue(staticAddress.hostname, 32);
-	wm.addParameter(p_hostname);
 
 // Create a checkbox for the debug boolean input field.
-//	char customhtml[24] = "type=\"checkbox\"";
-	char _value[2];
-	if(debug) {
-		strcpy(_value, "T");
-//		strcat(customhtml, " checked");
-	} else
-		strcpy(_value, "");
-	
-//	WiFiManagerParameter p_debug("debug", "Debug serial printout", _value, 2, customhtml, WFM_LABEL_AFTER);
-	p_debug->setValue(_value, 2);
-	wm.addParameter(p_debug);
+	if(debug)
+		p_debug->setValue("T", 2);
+	else
+		p_debug->setValue("", 2);
 
 // Gater the timeout for connection retry.
-	char _connect_timeout[6];
 	sprintf(_connect_timeout, "%d", connect_timeout);
-//	WiFiManagerParameter p_connect_timeout("connection_timeout_delay", "WiFi connection timeout :", _connect_timeout, 6);
 	p_connect_timeout->setValue(_connect_timeout, 6);
-	wm.addParameter(p_connect_timeout);
 
 // Gater the timeout before portal close by itself.
-	char _portal_timeout[6];
 	sprintf(_portal_timeout, "%d", portal_timeout);
-//	WiFiManagerParameter p_portal_timeout("portal_timeout_delay", "WiFi configuration portal timeout :", _portal_timeout, 6);
 	p_portal_timeout->setValue(_portal_timeout, 6);
+
+	wm.addParameter(p_hostname);
+	wm.addParameter(p_debug);
+	wm.addParameter(p_connect_timeout);
 	wm.addParameter(p_portal_timeout);
 
 // Apply the debug, save, static IP and timeout parameters to the portal.
+	std::vector<const char *> menu = {"wifi","info","sep","erase","restart","sep","exit"};
+	wm.setMenu(menu);								// custom menu via vector
+	wm.setClass("invert");							//set dark theme
 	wm.setDebugOutput(debug);
-// Callback to set shouldSaveConfig flag only if you it save button in portal.
 	wm.setSaveConfigCallback(saveConfigCallback);
-// Force static ip.
 	wm.setSTAStaticIPConfig(staticAddress.local, staticAddress.gateway, staticAddress.subnet);
 	wm.setConnectTimeout(connect_timeout);
 	wm.setConfigPortalTimeout(portal_timeout);
+
 }
 
 ///////////////////////////////////////////////////////////////////////////////////////

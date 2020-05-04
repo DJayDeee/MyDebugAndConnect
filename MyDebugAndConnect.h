@@ -1,9 +1,10 @@
 /****************************************************************************************
 * File :		MyDebugAndConnect.h
-* Date :		2018-Oct-10
+* Date :		2020-Mai-03
 * By :			Jean-Daniel Lavoie
 * Description :	This library configure the serial port and one led for debuging.
 *				It also allow to control the led (off, on and toggle).
+*				It also allow to manage the WiFi connection and his parameters.
 ****************************************************************************************/
 
 #ifndef		_MYDEBUGANDCONNECT_H_
