@@ -1,203 +1,364 @@
 /****************************************************************************************
 * File :		MyDebugAndConnect.cpp
-* Date :		2018-Oct-10
+* Date :		2020-Apr-25
 * By :			Jean-Daniel Lavoie
-* Description :	This library configure the serial port and one led for debuging.
-*				It also allow to control the led (off, on and toggle).
+* Description :	This library control the serial port and one led for debuging.
+*				It also allow to manage the WiFi connection and his parameters.
 ****************************************************************************************/
 
-#include	"MyDebugAndConnect.h"
+#include	<MyDebugAndConnect.h>
 
-int	mydebug::led_pin = DEFAULT_LED_PIN;
-void Toggle(void) { digitalWrite(mydebug::led_pin, !digitalRead(mydebug::led_pin));	}
+///////////////////////////////////////////////////////////////////////////////////////
+// Callback Helper to connect led_Toggle() with blynker Ticker.
+void Toggle(void) {	mydebug.led_Toggle(); }
 
-// Constructor : 
-mydebug::mydebug(const int br, const int pin) {
+///////////////////////////////////////////////////////////////////////////////////////
+// MyDebug Constructor.
+MyDebug::MyDebug(const int br, const int pin) {
 	led_pin = pin;
 	baudrate = br;
 }
 
-void mydebug::Init(void) {
+///////////////////////////////////////////////////////////////////////////////////////
+// Setup pin, ticker and serial.
+void MyDebug::Init(void) {
  	pinMode(led_pin, OUTPUT);
 	blynker.attach(0.6, Toggle);
-	
+
 	Serial.begin(baudrate);
 	Serial.println(" ");
 }
 
-void mydebug::led_OFF(void) {
+///////////////////////////////////////////////////////////////////////////////////////
+// Turn builtin led off.
+void MyDebug::led_OFF(void) {
 	digitalWrite(led_pin, HIGH);
 }
 
-void mydebug::led_ON(void) {
+///////////////////////////////////////////////////////////////////////////////////////
+// Turn builtin led on.
+void MyDebug::led_ON(void) {
 	digitalWrite(led_pin, LOW);
 }
 
-void mydebug::led_Toggle(void) {
+///////////////////////////////////////////////////////////////////////////////////////
+// Toggle builtin led state.
+void MyDebug::led_Toggle(void) {
 	digitalWrite(led_pin, !digitalRead(led_pin));
 }
-	
-void mydebug::setBlynkRate(const float seconds) {
-	if(seconds)								// If blynk rate is 0 stop the blynker and let the led on.
+
+///////////////////////////////////////////////////////////////////////////////////////
+// Change led blink speed.
+void MyDebug::setBlynkRate(const float seconds) {
+// If blynk rate is 0 stop the blynker and let the led off.
+	if(seconds)
 		blynker.attach(seconds, Toggle);
 	else {
 		blynker.detach();
 		led_OFF();
 	}
 }
-	
-void mydebug::handleWifiBlynk(bool force_actualise)	{
-	if ( (WiFi.isConnected() != last_wifistate) | force_actualise ){	// Change led blynk state only if WiFi status change.
+
+///////////////////////////////////////////////////////////////////////////////////////
+// Blynk slowly if not connected or turn led OFF when connected.  ONLY WHEN THE WIFI STATE CHANGE.
+void MyDebug::handle(bool force_actualise)	{
+// Change led blynk state only if WiFi status change.
+	if ( (WiFi.isConnected() != last_wifistate) | force_actualise ) {
 		last_wifistate = WiFi.isConnected();
-		if (!last_wifistate) {				// Led blynk slowly if WiFi is disconnected.
+// Led blynk slowly if WiFi is disconnected.  Led OFF solid if WiFi is connected.
+		if (!last_wifistate) {
 		  setBlynkRate(1);
 		  WiFi.begin();
-		} else								// Led OFF solid if WiFi is connected.
+		} else
 		  setBlynkRate(0);
 	}
+//	ArduinoOTA.handle();
+
 }
 
-
-
-
 /*=|=|=|=|=|=|=|=|=|=|=|=|=|=|=|=|=|=|=|=|=|=|=|=|=|=|=|=|=|=|=|=|=|=|=|=|=|=|=|=|=|=|=|=|=|=|=|=|=|=|=|=|=|=|=|=|=|=|=|=|=*/
 /*=|=|=|=|=|=|=|=|=|=|=|=|=|=|=|=|=|=|=|=|=|=|=|=|=|=|=|=|=|=|=|=|=|=|=|=|=|=|=|=|=|=|=|=|=|=|=|=|=|=|=|=|=|=|=|=|=|=|=|=|=*/
 /*=|=|=|=|=|=|=|=|=|=|=|=|=|=|=|=|=|=|=|=|=|=|=|=|=|=|=|=|=|=|=|=|=|=|=|=|=|=|=|=|=|=|=|=|=|=|=|=|=|=|=|=|=|=|=|=|=|=|=|=|=*/
+/*=|=|=|=|=|=|=|=|=|=|=|=|=|=|=|=|=|=|=|=|=|=|=|=|=|=|=|=|=|=|=|=|=|=|=|=|=|=|=|=|=|=|=|=|=|=|=|=|=|=|=|=|=|=|=|=|=|=|=|=|=*/
+
 ///////////////////////////////////////////////////////////////////////////////////////
-// Constructor :
-myconnect::myconnect(const int pin) {
+// Callback Helper to save parameters with writeConfigFile().
+void saveConfigCallback(void) {
+	myconnect.writeConfigFile(MYCONNECT_CONFIG_FILE);
+}
+
+///////////////////////////////////////////////////////////////////////////////////////
+// MyConnect Constructor.
+MyConnect::MyConnect(const int pin) {
 	factoreset_pin = pin;
 }
 
-
 ///////////////////////////////////////////////////////////////////////////////////////
-// Called to  restore and initialise WiFiManager.
-void myconnect::init(void) {	
+// First initialisation of the WiFi.
+void MyConnect::init(void) {
+// Factory reset pin to ground?
 	pinMode(factoreset_pin, INPUT);
-	if(!readConfigFile(CONFIG_FILE))				// Restore MQTT parameters from FileSystem.
-		DEBUG_MYCONNECT(F("==>CONTINUE WITHOUT RESTORING SETTINGS<=="));
-	
-	wm.setSaveConfigCallback(state_queue.push(FORCEWIFIMANAGER););	// Callback to set shouldSaveConfig flag only if you it save button in portal.
-//	wm.setShowStaticFields(true);					// force show static ip fields
-	wm.setConnectTimeout(20);						// how long to try to connect for before continuing													// setConfigPortalTimeout is ignored in this mode, user is responsible for closing configportal
+	if(digitalRead(factoreset_pin) == false)
+		FactoryReset();
 
-	DEBUG_MYCONNECT(F("# MYCONNECT initialized #"));
+// Restore parameters from MYCONNECT_CONFIG_FILE.
+	if(readConfigFile(MYCONNECT_CONFIG_FILE) == false)
+		ERROR_MYCONNECT(F("CONTINUE WITHOUT RESTORING SETTINGS."));
+
+// 
+	ConfigureManager();
+	if(wm.autoConnect() == false)
+		ERROR_MYCONNECT(F("Failed to connect or hit timeout"));
+	else
+		wifiInfo();
+
+//	ArduinoOTA.setHostname(staticAddress.hostname);
+//	ArduinoOTA.begin();
+	DEBUG_MYCONNECT(F("INITIALIZE successfully"));
 }
 
-
 ///////////////////////////////////////////////////////////////////////////////////////
-// Called to restore MQTT parameters from the SPIFF CONFIG_FILE.
+// Restore parameters from the SPIFF filename.
 // Return true if success.
-bool myconnect::readConfigFile(const char *filename) {
-	Serial.println(F("*<--===| Restoring config file |===-->"));
-
-	if(!SPIFFS.begin()){
-		Serial.println(F("==>ERROR<==  Unable to mount SPI Flash File System."));
+bool MyConnect::readConfigFile(const char *filename) {
+// Print the directory and filename of the configuration.
+	String sfilename = filename;
+	DEBUG_MYCONNECT("LOAD configuration from file : " + sfilename);
+// Open or create the SPIFFS file.
+	if(!SPIFFS.begin()) {
+		ERROR_MYCONNECT(F("Unable to MOUNT spiffs."));
 		return false;
 	}
 	if(!SPIFFS.exists(filename)) {
-		Serial.printf("==>ERROR<==  Configuration file \"%s\" does not exist.\n", filename);
+		ERROR_MYCONNECT("Unable to FIND : " + sfilename);
 		SPIFFS.end();
 		return false;
 	}
-	File f = SPIFFS.open(filename, "r");
-	if(!f) {
-		Serial.printf("==>ERROR<==  Unable to open \"%s\" to read configuration.\n", filename);
+	File file = SPIFFS.open(filename, "r");
+	if(!file) {
+		ERROR_MYCONNECT("Unable to OPEN : " + sfilename);
 		SPIFFS.end();
 		return false;
 	}
-	size_t size = f.size();								// Allocate and store contents of CONFIG_FILE in a buffer.
-	std::unique_ptr<char[]> buf(new char[size]);
-	f.readBytes(buf.get(), size);
-	f.close();											// Closing file and unmount SPIFlashFileSystem.
+
+// Allocate and store contents of file in a Document.
+	DynamicJsonDocument doc(512);
+	DeserializationError error = deserializeJson(doc, file);
+// Closing file and unmount SPIFlashFileSystem.
+	file.close();
 	SPIFFS.end();
-
-	DynamicJsonBuffer jsonBuffer;						// Using dynamic JSON buffer.
-	JsonObject& json = jsonBuffer.parseObject(buf.get()); // Parse JSON string.
-	if(!json.success()) {
-		Serial.println(F("==>ERROR<==  JSON parseObject() failed."));
-		return false;
+	if (error) {
+		String error_string = error.c_str();
+		ERROR_MYCONNECT("Failed to deserialize file : " + error_string);
+    	return false;
 	}
-				
-	if(json.containsKey(String(F("server"))))			// Parse all parameters and override local variables.
-		strcpy(MQTT_credential.server, json[String(F("server"))]);
-	if(json.containsKey(String(F("port"))))
-		MQTT_credential.port = json[String(F("port"))];
-	if(json.containsKey(String(F("username"))))
-		strcpy(MQTT_credential.username, json[String(F("username"))]);
-	if(json.containsKey(String(F("password"))))
-		strcpy(MQTT_credential.password, json[String(F("password"))]);
-	if(json.containsKey(String(F("clientID"))))
-		strcpy(MQTT_credential.clientID, json[String(F("clientID"))]);
-	if(json.containsKey(String(F("topic"))))
-		strcpy(MQTT_credential.topic, json[String(F("topic"))]);
+// Display the content of the JSON doc.
+	serializeJsonPretty(doc, Serial);
+	Serial.println("");
 
-	Serial.printf("Configuration from file \"%s\" :\n", filename); // Print what will be restore from the CONFIG_FILE.
-	json.prettyPrintTo(Serial);
-	Serial.println("***RESTORED***");
-	DEBUG_MYCONNECT("");
+// Parse all parameters and override local variables.
+	char *buf2 = new char[18];
+	if(doc.containsKey("local")) {
+		strcpy(buf2, doc["local"]);
+		staticAddress.local.fromString(buf2);
+	}
+	if(doc.containsKey("gateway")) {
+		strcpy(buf2, doc["gateway"]);
+		staticAddress.gateway.fromString(buf2);
+	}
+	if(doc.containsKey("subnet")) {
+		strcpy(buf2, doc["subnet"]);
+		staticAddress.subnet.fromString(buf2);
+	}
+	if(doc.containsKey("hostname"))
+		strcpy(staticAddress.hostname, doc["hostname"]);
+	if(doc.containsKey("debug"))
+		debug = doc["debug"];
+	if(doc.containsKey("connect_timeout"))
+		connect_timeout = doc["connect_timeout"];
+	if(doc.containsKey("portal_timeout"))
+		portal_timeout = doc["portal_timeout"];
+
+	DEBUG_MYCONNECT(F("Configuration RESTORED."));
 	return true;
 }
 
-
 ///////////////////////////////////////////////////////////////////////////////////////
-// Called to save MQTT parameters to CONFIG_FILE in the FileSystem
+// Save parameters to filename in the FileSystem
 // Return true if success.
-bool myconnect::writeConfigFile(const char *filename) {
-	Serial.println(F("<--===| Saving config file |===-->"));
-
-	if(!SPIFFS.begin()){
-		Serial.println(F("==>ERROR<==  Unable to mount SPI Flash File System."));
+bool MyConnect::writeConfigFile(const char *filename) {
+// Print the directory and filename of the configuration.
+	String sfilename = filename;
+	DEBUG_MYCONNECT("SAVE configuration to file : " + sfilename);
+// Open or create the SPIFFS file.
+	if(!SPIFFS.begin()) {
+		ERROR_MYCONNECT(F("Unable to MOUNT spiffs."));
 		return false;
 	}
-	File f = SPIFFS.open(filename, "w");
-	if(!f) {
-		Serial.printf("==>ERROR<==  Failed to open \"%s\" for writing configuration.\n", filename);
+	File file = SPIFFS.open(filename, "w");
+	if(!file) {
+		ERROR_MYCONNECT("Unable to OPEN : " + sfilename);
 		SPIFFS.end();
 		return false;
 	}
 
-	DynamicJsonBuffer jsonBuffer;						// Using dynamic JSON buffer which is not the recommended memory model, but anyway, See https://github.com/bblanchon/ArduinoJson/wiki/Memory%20model
-	JsonObject& json = jsonBuffer.createObject();		// Create JSON string.
-	json[String(F("server"))]	= MQTT_credential.server;
-	json[String(F("port"))]		= MQTT_credential.port;
-	json[String(F("clientID"))]	= MQTT_credential.clientID;
-	json[String(F("username"))]	= MQTT_credential.username;
-	json[String(F("password"))]	= MQTT_credential.password;
-	json[String(F("topic"))]	= MQTT_credential.topic;
-	
-	json.printTo(f);									// Write data to file, close it and unmount SPIFlashFileSystem.
-	f.close();
-	SPIFFS.end();
+// Get the IP adress we are currently using.
+	staticAddress.local 	= WiFi.localIP();
+	staticAddress.gateway	= WiFi.gatewayIP();
+	staticAddress.subnet	= WiFi.subnetMask();	
+// Get advanced parameters from WiFiManager.
+	strcpy(staticAddress.hostname, const_cast<char*>(p_hostname->getValue()));
+	myconnect.debug = (strncmp(p_debug->getValue(), "T", 1) == 0);
+	myconnect.connect_timeout = atoi(p_connect_timeout->getValue());
+	myconnect.portal_timeout = atoi(p_portal_timeout->getValue());
 
-	Serial.printf("Configuration file \"%s\" :\n", filename);
-	json.prettyPrintTo(Serial);
-	Serial.println("***SAVED***");
+// Create a JSON document and pass it the parameters.
+	DynamicJsonDocument doc(512);
+	doc["local"]	= staticAddress.local.toString();
+	doc["gateway"]	= staticAddress.gateway.toString();
+	doc["subnet"]	= staticAddress.subnet.toString();
+	doc["hostname"]	= staticAddress.hostname;
+	doc["debug"]	= debug;
+	doc["connect_timeout"]	= connect_timeout;
+	doc["portal_timeout"]	= portal_timeout;
+// If debug is enable display the content of the JSON document.
+	if(debug) {
+		serializeJsonPretty(doc, Serial);
+		Serial.println("");
+	}
+
+// Save the JSON document to the file SPIFFS.
+	size_t size = serializeJson(doc, file);
+// Closing file and unmount SPIFlashFileSystem.
+	file.close();
+	SPIFFS.end();
+	if (size == 0) {
+		ERROR_MYCONNECT("Failed to write to file");
+		return false;
+	}
+
+	DEBUG_MYCONNECT(F("Configuration SAVED."));
 	return true;
 }
 
-
 ///////////////////////////////////////////////////////////////////////////////////////
-// Called to configure and save the WiFi credentials and MQTT parameters.
-void myconnect::StartManager(int timeout) {
-	wm.setConfigPortalTimeout(timeout);				// auto close configportal after n seconds
-	if(!wm.startConfigPortal())						// auto generated AP name from chipid
-		DEBUG_MYCONNECT(F("Failed to connect or hit timeout"));
+// Configure WiFiManager.
+void MyConnect::ConfigureManager(void) {
+// Use defined hostname.
+	WiFi.hostname(staticAddress.hostname);
+//	WiFiManagerParameter p_hostname("hostname", "Custom hostname :", staticAddress.hostname, 32);
+	p_hostname->setValue(staticAddress.hostname, 32);
+	wm.addParameter(p_hostname);
+
+// Create a checkbox for the debug boolean input field.
+//	char customhtml[24] = "type=\"checkbox\"";
+	char _value[2];
+	if(debug) {
+		strcpy(_value, "T");
+//		strcat(customhtml, " checked");
+	} else
+		strcpy(_value, "");
+	
+//	WiFiManagerParameter p_debug("debug", "Debug serial printout", _value, 2, customhtml, WFM_LABEL_AFTER);
+	p_debug->setValue(_value, 2);
+	wm.addParameter(p_debug);
+
+// Gater the timeout for connection retry.
+	char _connect_timeout[6];
+	sprintf(_connect_timeout, "%d", connect_timeout);
+//	WiFiManagerParameter p_connect_timeout("connection_timeout_delay", "WiFi connection timeout :", _connect_timeout, 6);
+	p_connect_timeout->setValue(_connect_timeout, 6);
+	wm.addParameter(p_connect_timeout);
+
+// Gater the timeout before portal close by itself.
+	char _portal_timeout[6];
+	sprintf(_portal_timeout, "%d", portal_timeout);
+//	WiFiManagerParameter p_portal_timeout("portal_timeout_delay", "WiFi configuration portal timeout :", _portal_timeout, 6);
+	p_portal_timeout->setValue(_portal_timeout, 6);
+	wm.addParameter(p_portal_timeout);
+
+// Apply the debug, save, static IP and timeout parameters to the portal.
+	wm.setDebugOutput(debug);
+// Callback to set shouldSaveConfig flag only if you it save button in portal.
+	wm.setSaveConfigCallback(saveConfigCallback);
+// Force static ip.
+	wm.setSTAStaticIPConfig(staticAddress.local, staticAddress.gateway, staticAddress.subnet);
+	wm.setConnectTimeout(connect_timeout);
+	wm.setConfigPortalTimeout(portal_timeout);
 }
 
 ///////////////////////////////////////////////////////////////////////////////////////
-// Called to reset the WiFi credentials.
-void myconnect::ResetWiFi(void) {
-	DEBUG_MYCONNECT(F("!ERASING WiFi parameters and restart!"));
+// Open WiFi credentials portal.
+void MyConnect::StartManager(int timeout) {
+	wm.setConfigPortalTimeout(timeout);
+	if(!wm.startConfigPortal())
+		ERROR_MYCONNECT(F("Failed to connect or hit timeout"));
+	else
+		wifiInfo();
+}
+
+///////////////////////////////////////////////////////////////////////////////////////
+// Display WiFi status, hostname and IP address.
+void MyConnect::wifiInfo(void) {
+	switch(WiFi.waitForConnectResult()) {
+		case WL_CONNECTED:		DEBUG_MYCONNECT(F("WL_CONNECTED (Successful connection is established)."));		break;
+		case WL_IDLE_STATUS:	DEBUG_MYCONNECT(F("WL_IDLE_STATUS (Changing between statuses)."));				return;
+		case WL_NO_SSID_AVAIL:	DEBUG_MYCONNECT(F("WL_NO_SSID_AVAIL (Configured SSID cannot be reached)."));	return;
+		case WL_CONNECT_FAILED:	DEBUG_MYCONNECT(F("WL_CONNECT_FAILED (Password is incorrect?)."));				return;
+		case WL_DISCONNECTED:	DEBUG_MYCONNECT(F("WL_DISCONNECTED (Not configured in station mode)."));		return;
+		default:				DEBUG_MYCONNECT(F("UNKNOW (42)"));												return;
+	}
+
+	DEBUG_MYCONNECT("Local HostName is " + WiFi.hostname());
+	DEBUG_MYCONNECT("Local IP is " + WiFi.localIP().toString());
+}
+
+///////////////////////////////////////////////////////////////////////////////////////
+// Reset (DELETE) parameters file.
+void MyConnect::ResetConfigFile(const char *filename) {
+	DEBUG_MYCONNECT(F("ERASING ConfigFile."));
+	String sfilename = filename;
+	if(SPIFFS.begin()) {
+		if(SPIFFS.exists(filename)) {
+			DEBUG_MYCONNECT("DELETING parameters file : " + sfilename);
+			SPIFFS.remove(filename);
+		}
+		SPIFFS.end();
+	} else
+		ERROR_MYCONNECT(F("Unable to MOUNT spiffs to remove ConfigFile."));
+}
+
+///////////////////////////////////////////////////////////////////////////////////////
+// Reset the WiFi credentials.
+void MyConnect::ResetWiFi(void) {
+	DEBUG_MYCONNECT(F("ERASING WiFi credentials and restart."));
 	wm.resetSettings();
-	state_queue.push(RESTART);
+	ESP.restart();
+    while(true);
 }
 
+///////////////////////////////////////////////////////////////////////////////////////
+// Reset the WiFi credentials.
+void MyConnect::FactoryReset(void) {
+	DEBUG_MYCONNECT(F("FULL FACTORY RESET ACTIVATED!"));
+	ResetConfigFile(MYCONNECT_CONFIG_FILE);
+	ResetWiFi();
+}
 
 ///////////////////////////////////////////////////////////////////////////////////////
-// Channel to print the debug.
+// Channel to print the debug.  Print text only if debug is active.
 template <typename Generic>
-void myconnect::DEBUG_MYCONNECT(Generic text) const{
-	Serial.print("*DEBUG_MYCONNECT: ");
+void MyConnect::DEBUG_MYCONNECT(Generic text) const{
+	if (debug) {
+		Serial.print("*DEBUG_MYCONNECT: ");
+		Serial.println(text);
+	}
+}
+
+///////////////////////////////////////////////////////////////////////////////////////
+// Channel to print the ERROR.
+template <typename Generic>
+void MyConnect::ERROR_MYCONNECT(Generic text) const{
+	Serial.print("!!ERROR_MYCONNECT: ");
 	Serial.println(text);
 }
