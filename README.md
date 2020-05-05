@@ -61,4 +61,4 @@ It also hide custom parameters for WiFiManager.
 - [Arduino for ESP8266](https://github.com/esp8266/Arduino)
 - [SPI Flash File System (SPIFFS)](https://github.com/pellepl/spiffs)
 - [C++ JSON library for IoT](https://github.com/bblanchon/ArduinoJson) [https://arduinojson.org](https://arduinojson.org)
-- [Ticker library for Arduino](https://github.com/sstaub/Ticker)
+- [Ticker by Ivan Grokhtokov]
