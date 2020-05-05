@@ -1,0 +1,23 @@
+{
+  "name": "MyDebugAndConnect",
+  "keywords": "wifi,wi-fi,esp,esp8266,espressif8266,nodemcu,wemos,arduino",
+  "description": "Debug tools and WiFi Configuration manager with web configuration portal for ESP boards",
+"authors":
+[
+    {
+        "name": "DJayDeee",
+        "url": "https://github.com/DJayDeee"
+    }
+],
+"repository":
+  {
+    "type": "git",
+    "url": "https://github.com/DJayDeee/MyDebugAndConnect.git"
+  },
+  "frameworks": "arduino",
+  "platforms": 
+  [
+    "espressif8266"
+  ],
+  "version": "1.0.0"
+}
