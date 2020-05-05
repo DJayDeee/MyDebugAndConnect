@@ -10,7 +10,7 @@
 
 ///////////////////////////////////////////////////////////////////////////////////////
 // Callback Helper to connect led_Toggle() with blynker Ticker.
-void Toggle(void) {	mydebug.led_Toggle(); }
+void ToggleCallback(void) {	mydebug.led_Toggle(); }
 
 ///////////////////////////////////////////////////////////////////////////////////////
 // MyDebug Constructor.
@@ -23,7 +23,7 @@ MyDebug::MyDebug(const int br, const int pin) {
 // Setup pin, ticker and serial.
 void MyDebug::Init(void) {
  	pinMode(led_pin, OUTPUT);
-	blynker.attach(0.6, Toggle);
+	blynker.attach(0.6, ToggleCallback);
 
 	Serial.begin(baudrate);
 	Serial.println(" ");
@@ -52,7 +52,7 @@ void MyDebug::led_Toggle(void) {
 void MyDebug::setBlynkRate(const float seconds) {
 // If blynk rate is 0 stop the blynker and let the led off.
 	if(seconds)
-		blynker.attach(seconds, Toggle);
+		blynker.attach(seconds, ToggleCallback);
 	else {
 		blynker.detach();
 		led_OFF();

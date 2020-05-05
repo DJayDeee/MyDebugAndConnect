@@ -14,7 +14,7 @@
 #include	<ArduinoJson.h>						// https://github.com/bblanchon/ArduinoJson
 #include	<ESP8266WiFi.h>						// https://github.com/esp8266/Arduino
 #include	<WiFiManager.h>						// https://github.com/tzapu/WiFiManager/tree/development
-#include	<Ticker.h>							// Timer manager
+#include	<Ticker.h>							// https://github.com/sstaub/Ticker
 
 #include <WiFiUdp.h>
 #include <ArduinoOTA.h>
@@ -22,7 +22,7 @@
 #define	DEFAULT_LED_PIN		2					// Buitlin led for Wemos D1 mini.
 #define	DEFAULT_BAUDRATE	74880				// To ensure readability of the bootloader.
 
-void 			Toggle(void);					// Callback Helper to connect led_Toggle() with blynker Ticker.
+void 			ToggleCallback(void);					// Callback Helper to connect led_Toggle() with blynker Ticker.
 
 class MyDebug {
   public:
@@ -59,7 +59,7 @@ class MyConnect {
   public:
 							MyConnect(const int pin);
 	void					init(void);
-	void					StartManager(int timeout = 0);	// Use WiFiManager and get MQTT parameters.
+	void					StartManager(int timeout = 0);	// Start WiFiManager configuration portal.
 	bool					writeConfigFile(const char *filename = MYCONNECT_CONFIG_FILE);
 	void					setDebug(const bool _debug) { debug = _debug; }	// Called to enable/disable the debug information over serial.
 	void					wifiInfo(void);
