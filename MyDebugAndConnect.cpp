@@ -279,6 +279,7 @@ void MyConnect::ConfigureManager(void) {
 	wm.setSTAStaticIPConfig(staticAddress.local, staticAddress.gateway, staticAddress.subnet);
 	wm.setConnectTimeout(connect_timeout);
 	wm.setConfigPortalTimeout(portal_timeout);
+	wm.setCountry(US);
 
 }
 
@@ -287,7 +288,7 @@ void MyConnect::ConfigureManager(void) {
 void MyConnect::StartManager(int timeout) {
 	wm.setConfigPortalTimeout(timeout);
 	if(!wm.startConfigPortal())
-		ERROR_MYCONNECT(F("Failed to connect or hit timeout"));
+		ERROR_MYCONNECT(F("Failed to connect OR hit timeout OR closed without modification"));
 	else
 		wifiInfo();
 }
