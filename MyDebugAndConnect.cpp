@@ -279,7 +279,7 @@ void MyConnect::ConfigureManager(void) {
 	wm.setSTAStaticIPConfig(staticAddress.local, staticAddress.gateway, staticAddress.subnet);
 	wm.setConnectTimeout(connect_timeout);
 	wm.setConfigPortalTimeout(portal_timeout);
-	wm.setCountry(US);
+	wm.setCountry("US");
 
 }
 
