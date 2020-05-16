@@ -126,20 +126,20 @@ bool MyConnect::readConfigFile(const char *filename) {
 // Print the directory and filename of the configuration.
 	String sfilename = filename;
 	DEBUG_MYCONNECT("LOAD configuration from file : " + sfilename);
-// Open or create the SPIFFS file.
-	if(!SPIFFS.begin()) {
-		ERROR_MYCONNECT(F("Unable to MOUNT spiffs."));
+// Open or create the LittleFS file.
+	if(!LittleFS.begin()) {
+		ERROR_MYCONNECT(F("Unable to MOUNT LittleFS."));
 		return false;
 	}
-	if(!SPIFFS.exists(filename)) {
+	if(!LittleFS.exists(filename)) {
 		ERROR_MYCONNECT("Unable to FIND : " + sfilename);
-		SPIFFS.end();
+		LittleFS.end();
 		return false;
 	}
-	File file = SPIFFS.open(filename, "r");
+	File file = LittleFS.open(filename, "r");
 	if(!file) {
 		ERROR_MYCONNECT("Unable to OPEN : " + sfilename);
-		SPIFFS.end();
+		LittleFS.end();
 		return false;
 	}
 
@@ -147,7 +147,7 @@ bool MyConnect::readConfigFile(const char *filename) {
 	DeserializationError error = deserializeJson(doc, file);
 // Closing file and unmount SPIFlashFileSystem.
 	file.close();
-	SPIFFS.end();
+	LittleFS.end();
 	if (error) {
 		String error_string = error.c_str();
 		ERROR_MYCONNECT("Failed to deserialize file : " + error_string);
@@ -191,15 +191,15 @@ bool MyConnect::writeConfigFile(const char *filename) {
 // Print the directory and filename of the configuration.
 	String sfilename = filename;
 	DEBUG_MYCONNECT("SAVE configuration to file : " + sfilename);
-// Open or create the SPIFFS file.
-	if(!SPIFFS.begin()) {
-		ERROR_MYCONNECT(F("Unable to MOUNT spiffs."));
+// Open or create the LittleFS file.
+	if(!LittleFS.begin()) {
+		ERROR_MYCONNECT(F("Unable to MOUNT LittleFS."));
 		return false;
 	}
-	File file = SPIFFS.open(filename, "w");
+	File file = LittleFS.open(filename, "w");
 	if(!file) {
 		ERROR_MYCONNECT("Unable to OPEN : " + sfilename);
-		SPIFFS.end();
+		LittleFS.end();
 		return false;
 	}
 
@@ -227,11 +227,11 @@ bool MyConnect::writeConfigFile(const char *filename) {
 		Serial.println("");
 	}
 
-// Save the JSON document to the file SPIFFS.
+// Save the JSON document to the file LittleFS.
 	size_t size = serializeJson(doc, file);
 // Closing file and unmount SPIFlashFileSystem.
 	file.close();
-	SPIFFS.end();
+	LittleFS.end();
 	if (size == 0) {
 		ERROR_MYCONNECT("Failed to write to file");
 		return false;
@@ -314,14 +314,14 @@ void MyConnect::wifiInfo(void) {
 void MyConnect::ResetConfigFile(const char *filename) {
 	DEBUG_MYCONNECT(F("ERASING ConfigFile."));
 	String sfilename = filename;
-	if(SPIFFS.begin()) {
-		if(SPIFFS.exists(filename)) {
+	if(LittleFS.begin()) {
+		if(LittleFS.exists(filename)) {
 			DEBUG_MYCONNECT("DELETING parameters file : " + sfilename);
-			SPIFFS.remove(filename);
+			LittleFS.remove(filename);
 		}
-		SPIFFS.end();
+		LittleFS.end();
 	} else
-		ERROR_MYCONNECT(F("Unable to MOUNT spiffs to remove ConfigFile."));
+		ERROR_MYCONNECT(F("Unable to MOUNT LittleFS to remove ConfigFile."));
 }
 
 ///////////////////////////////////////////////////////////////////////////////////////

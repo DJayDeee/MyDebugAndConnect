@@ -11,7 +11,7 @@
 #define		_MYDEBUGANDCONNECT_H_
 
 /**FILES MANAGEMENT***********************************************************************************/
-#include	<FS.h>								// https://github.com/pellepl/spiffs
+#include	<LittleFS.h>						// 
 #include	<ArduinoJson.h>						// https://github.com/bblanchon/ArduinoJson
 /**SERVER MANAGEMENT***********************************************************************************/
 #include	<ESP8266WiFi.h>						// https://github.com/esp8266/Arduino
@@ -19,7 +19,7 @@
 #include	<WiFiUdp.h>
 #include	<ArduinoOTA.h>
 
-
+#include	<Ticker.h>
 #define	DEFAULT_BAUDRATE	74880				// To ensure readability of the bootloader.
 void 			ToggleCallback(void);			// Callback Helper to connect led_Toggle() with blynker Ticker.
 class MyDebug {
