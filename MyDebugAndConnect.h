@@ -19,14 +19,13 @@
 #include <WiFiUdp.h>
 #include <ArduinoOTA.h>
 
-#define	DEFAULT_LED_PIN		2					// Buitlin led for Wemos D1 mini.
 #define	DEFAULT_BAUDRATE	74880				// To ensure readability of the bootloader.
 
 void 			ToggleCallback(void);					// Callback Helper to connect led_Toggle() with blynker Ticker.
 
 class MyDebug {
   public:
-				MyDebug(const int br, const int pin = DEFAULT_LED_PIN);
+				MyDebug(const int br, const int pin = LED_BUILTIN);
 	void		Init(void);
 
 	void		led_OFF(void);
