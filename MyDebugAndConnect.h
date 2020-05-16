@@ -1,11 +1,11 @@
-/****************************************************************************************
+/******************************************************************************************************
 * File :		MyDebugAndConnect.h
-* Date :		2020-Mai-03
+* Date :		2020-Mai-15
 * By :			Jean-Daniel Lavoie
 * Description :	This library configure the serial port and one led for debuging.
 *				It also allow to control the led (off, on and toggle).
 *				It also allow to manage the WiFi connection and his parameters.
-****************************************************************************************/
+******************************************************************************************************/
 
 #ifndef		_MYDEBUGANDCONNECT_H_
 #define		_MYDEBUGANDCONNECT_H_
@@ -13,17 +13,15 @@
 /**FILES MANAGEMENT***********************************************************************************/
 #include	<FS.h>								// https://github.com/pellepl/spiffs
 #include	<ArduinoJson.h>						// https://github.com/bblanchon/ArduinoJson
+/**SERVER MANAGEMENT***********************************************************************************/
 #include	<ESP8266WiFi.h>						// https://github.com/esp8266/Arduino
 #include	<WiFiManager.h>						// https://github.com/tzapu/WiFiManager/tree/development
-#include	<Ticker.h>							// https://github.com/sstaub/Ticker
+#include	<WiFiUdp.h>
+#include	<ArduinoOTA.h>
 
-#include <WiFiUdp.h>
-#include <ArduinoOTA.h>
 
 #define	DEFAULT_BAUDRATE	74880				// To ensure readability of the bootloader.
-
-void 			ToggleCallback(void);					// Callback Helper to connect led_Toggle() with blynker Ticker.
-
+void 			ToggleCallback(void);			// Callback Helper to connect led_Toggle() with blynker Ticker.
 class MyDebug {
   public:
 				MyDebug(const int br, const int pin = LED_BUILTIN);
@@ -43,6 +41,7 @@ class MyDebug {
 	int 		last_wifistate;
 };
 
+
 static	const	IPAddress	DHCPAddress = IPAddress(0,0,0,0);		// IP adress used to force DHCP in STA mode.
 struct _staticAddress {										// Container for the IP, GATEWAY, SUBNET address and HOSTNAME.
 	IPAddress	local	= IPAddress(192,168,0,4);
@@ -50,11 +49,8 @@ struct _staticAddress {										// Container for the IP, GATEWAY, SUBNET addres
 	IPAddress	subnet	= IPAddress(255,255,255,0);
 	char		hostname[32];
 };
-
 #define	MYCONNECT_CONFIG_FILE	"/config_myconnect.json"	// CONFIG_FILE is the name of the Configuration file.
-
 void 						saveConfigCallback(void);		// Callback Helper to save parameters with writeConfigFile().
-
 class MyConnect {
   public:
 							MyConnect(const int pin);
