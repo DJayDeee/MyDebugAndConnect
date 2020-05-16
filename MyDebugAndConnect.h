@@ -10,6 +10,7 @@
 #ifndef		_MYDEBUGANDCONNECT_H_
 #define		_MYDEBUGANDCONNECT_H_
 
+/**FILES MANAGEMENT***********************************************************************************/
 #include	<FS.h>								// https://github.com/pellepl/spiffs
 #include	<ArduinoJson.h>						// https://github.com/bblanchon/ArduinoJson
 #include	<ESP8266WiFi.h>						// https://github.com/esp8266/Arduino
