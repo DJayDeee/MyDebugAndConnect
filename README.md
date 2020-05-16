@@ -9,7 +9,6 @@ It also hide custom parameters for WiFiManager.
 
 ### Defines and structures
 * For the MyDebug class :
-  * DEFAULT_LED_PIN define is used to select the onboard led pin by default (2).
   * DEFAULT_BAUDRATE is serial monitor speed by default (74880).  This speed specially allow to see bootloader informations.
   
 * For the MyDebug class :
